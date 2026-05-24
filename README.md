@@ -2,6 +2,10 @@
 
 Standalone HTTPS agent that runs on a Raspberry Pi and serves local camera streams only to signed EZ Cams backend requests.
 
+For now, run the Pi agent as a normal Python command from this repo's virtual
+environment. It is not installed as a `systemd` service, so it only stays online
+while the command is running.
+
 ## Camera Config
 
 Create `/etc/ezcams-pi/cameras.json`:
@@ -63,21 +67,38 @@ The `stream_url` and `snapshot_url` stay on the Pi. They are not sent to app use
    sudo nano /etc/ezcams-pi/cameras.json
    ```
 
-5. Install and start systemd service:
+5. Run the Pi agent:
 
    ```bash
-   sudo cp /opt/ezcams-pi-agent/systemd/ezcams-pi-agent.service /etc/systemd/system/
-   sudo systemctl daemon-reload
-   sudo systemctl enable --now ezcams-pi-agent
+   sudo /opt/ezcams-pi-agent/.venv/bin/python -m ezcams_pi_agent run \
+     --config-dir /etc/ezcams-pi
    ```
+
+   The existing console script also works:
+
+   ```bash
+   sudo /opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent run \
+     --config-dir /etc/ezcams-pi
+   ```
+
+   Leave this command running. If the terminal process exits, the Pi agent is
+   offline until you start it again.
 
 6. Forward router TCP port `8443` to the Pi LAN IP port `8443`.
 
-7. Verify:
+7. Verify from another terminal:
 
    ```bash
+   curl -k https://127.0.0.1:8443/health
    curl -k https://YOUR_PUBLIC_STATIC_IP:8443/health
    curl -k https://YOUR_PUBLIC_STATIC_IP:8443/stream/front-door
    ```
 
 The unsigned stream request should return `401`. A stream should work through `cams-server` only after the backend signs the Pi request.
+
+## Camera Router
+
+The camera streaming service can run as a separate process. The Pi agent should
+be started and stopped independently from the camera router, and future combined
+health checks can report camera-router status through the Pi agent `/health`
+endpoint.

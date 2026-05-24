@@ -118,14 +118,11 @@ async def startup() -> None:
 async def health():
     try:
         config = _get_config()
-        cameras = load_cameras(config.cameras_path)
+        load_cameras(config.cameras_path)
     except Exception as exc:
-        return {"status": "error", "detail": str(exc)}
-    return {
-        "status": "ok",
-        "device_id": config.device_id,
-        "camera_count": len(cameras),
-    }
+        log.warning("Pi agent health check failed: %s", exc)
+        return {"status": "error"}
+    return {"status": "ok"}
 
 
 @app.get("/snapshot/{camera_key}")

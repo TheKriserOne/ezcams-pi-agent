@@ -23,7 +23,7 @@ def _setup(args: argparse.Namespace) -> None:
         force=args.force,
         insecure_backend_tls=args.insecure_backend_tls,
     )
-    print(f"Registered EZ Cams Pi device {config.device_id}")
+    print(f"Success: registered EZ Cams Pi device {config.device_id}")
     print(f"Config written to {(Path(args.config_dir) if args.config_dir else Path('/etc/ezcams-pi')) / 'config.json'}")
 
 

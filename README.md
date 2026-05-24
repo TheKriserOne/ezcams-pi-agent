@@ -5,9 +5,30 @@ Standalone HTTPS agent that runs on a Raspberry Pi and serves local camera strea
 Run the Pi agent in the foreground for a quick test, or install the included
 `systemd` service for production so it restarts automatically.
 
+## Local Config
+
+By default, setup writes agent files into `.ezcams-pi/` at the repository root:
+
+```text
+.ezcams-pi/
+  config.json
+  cameras.json
+  device.key
+  agent.crt
+  agent-tls.key
+```
+
+That directory is gitignored so keys, certs, and local settings are not committed.
+Override the location with `--config-dir` or the `EZCAMS_PI_CONFIG_DIR` environment
+variable.
+
+Example templates live in `examples/ezcams-pi/`. After `setup`, edit
+`.ezcams-pi/cameras.json` using `examples/ezcams-pi/cameras.example.json` as a
+guide.
+
 ## Camera Config
 
-Create `/etc/ezcams-pi/cameras.json`:
+Create `.ezcams-pi/cameras.json` in the repo (or copy from the example):
 
 ```json
 {
@@ -52,7 +73,7 @@ The `stream_url` and `snapshot_url` stay on the Pi. They are not sent to app use
 3. Register the Pi with a backend claim code:
 
    ```bash
-   sudo /opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent setup \
+   ./.venv/bin/ezcams-pi-agent setup \
      --backend-url https://your-api.example.com \
      --claim-code YOUR-CLAIM-CODE \
      --name "Home Pi" \
@@ -60,24 +81,24 @@ The `stream_url` and `snapshot_url` stay on the Pi. They are not sent to app use
      --port 8443
    ```
 
+   This creates `.ezcams-pi/config.json` and related files in the repo.
+
 4. Edit cameras:
 
    ```bash
-   sudo nano /etc/ezcams-pi/cameras.json
+   nano .ezcams-pi/cameras.json
    ```
 
 5. Run the Pi agent in the foreground for a quick test:
 
    ```bash
-   sudo /opt/ezcams-pi-agent/.venv/bin/python -m ezcams_pi_agent run \
-     --config-dir /etc/ezcams-pi
+   ./.venv/bin/python -m ezcams_pi_agent run
    ```
 
    The console script also works:
 
    ```bash
-   sudo /opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent run \
-     --config-dir /etc/ezcams-pi
+   ./.venv/bin/ezcams-pi-agent run
    ```
 
 6. For production, install and start the systemd service:

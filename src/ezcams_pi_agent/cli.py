@@ -8,7 +8,7 @@ from pathlib import Path
 import uvicorn
 
 from ezcams_pi_agent.backend_client import get_device_token, heartbeat_once, sync_cameras_once
-from ezcams_pi_agent.config import load_config
+from ezcams_pi_agent.config import config_path, default_config_dir, load_config
 from ezcams_pi_agent.setup import setup_agent
 
 
@@ -24,7 +24,8 @@ def _setup(args: argparse.Namespace) -> None:
         insecure_backend_tls=args.insecure_backend_tls,
     )
     print(f"Success: registered EZ Cams Pi device {config.device_id}")
-    print(f"Config written to {(Path(args.config_dir) if args.config_dir else Path('/etc/ezcams-pi')) / 'config.json'}")
+    config_dir = Path(args.config_dir) if args.config_dir else default_config_dir()
+    print(f"Config written to {config_path(config_dir)}")
 
 
 def _run(args: argparse.Namespace) -> None:

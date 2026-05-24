@@ -1,0 +1,12 @@
+{
+  "backend_url": "http://192.168.1.244:3000",
+  "device_id": "YOUR-DEVICE-UUID",
+  "name": "Home Pi",
+  "static_ip": "192.168.1.113",
+  "port": 8443,
+  "backend_public_key_pem": "-----BEGIN PUBLIC KEY-----\nREPLACE-WITH-BACKEND-PUBLIC-KEY\n-----END PUBLIC KEY-----\n",
+  "private_key_path": "/path/to/ezcams-pi-agent/.ezcams-pi/device.key",
+  "cert_path": "/path/to/ezcams-pi-agent/.ezcams-pi/agent.crt",
+  "cert_key_path": "/path/to/ezcams-pi-agent/.ezcams-pi/agent-tls.key",
+  "cameras_path": "/path/to/ezcams-pi-agent/.ezcams-pi/cameras.json"
+}

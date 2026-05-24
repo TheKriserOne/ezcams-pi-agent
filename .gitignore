@@ -19,6 +19,8 @@ dist/
 
 .DS_Store
 
+.ezcams-pi/
+
 config.json
 cameras.json
 *.key

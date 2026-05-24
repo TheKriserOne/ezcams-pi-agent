@@ -1,0 +1,16 @@
+{
+  "cameras": [
+    {
+      "key": "front-door",
+      "name": "Front Door",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "stream_url": "http://192.168.1.50:8080/video",
+      "snapshot_url": "",
+      "stream_type": "mjpeg",
+      "description": "Front entrance",
+      "is_active": true,
+      "is_available": true
+    }
+  ]
+}

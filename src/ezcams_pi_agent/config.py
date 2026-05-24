@@ -5,9 +5,23 @@ import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+CONFIG_DIR_NAME = ".ezcams-pi"
+
+
+def repo_root() -> Path | None:
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "pyproject.toml").is_file():
+            return parent
+    return None
+
 
 def default_config_dir() -> Path:
-    return Path(os.getenv("EZCAMS_PI_CONFIG_DIR", "/etc/ezcams-pi"))
+    if env_dir := os.getenv("EZCAMS_PI_CONFIG_DIR"):
+        return Path(env_dir)
+    if root := repo_root():
+        return root / CONFIG_DIR_NAME
+    return Path.cwd() / CONFIG_DIR_NAME
 
 
 @dataclass(frozen=True)

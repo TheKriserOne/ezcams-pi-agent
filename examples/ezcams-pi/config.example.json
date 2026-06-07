@@ -8,5 +8,11 @@
   "private_key_path": "/path/to/ezcams-pi-agent/.ezcams-pi/device.key",
   "cert_path": "/path/to/ezcams-pi-agent/.ezcams-pi/agent.crt",
   "cert_key_path": "/path/to/ezcams-pi-agent/.ezcams-pi/agent-tls.key",
-  "cameras_path": "/path/to/ezcams-pi-agent/.ezcams-pi/cameras.json"
+  "cameras_path": "/path/to/ezcams-pi-agent/.ezcams-pi/cameras.json",
+  "allow_public_api": false,
+  "runtime": {
+    "jpeg_quality": 80,
+    "reconnect_delay_seconds": 5.0,
+    "client_start_timeout_seconds": 10.0
+  }
 }

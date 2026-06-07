@@ -5,10 +5,42 @@
       "name": "Front Door",
       "lat": 40.7128,
       "lng": -74.006,
+      "fps": 10,
       "stream_url": "http://192.168.1.50:8080/video",
       "snapshot_url": "",
       "stream_type": "mjpeg",
-      "description": "Front entrance",
+      "description": "Legacy http_mjpeg shortcut: stream_url is treated as HTTP MJPEG.",
+      "is_active": true,
+      "is_available": true
+    },
+    {
+      "key": "backyard",
+      "name": "Backyard",
+      "lat": 40.713,
+      "lng": -74.0058,
+      "fps": 15,
+      "source": {
+        "type": "rtsp",
+        "url": "rtsp://user:pass@192.168.1.60:554/stream1"
+      },
+      "description": "RTSP source decoded via OpenCV+FFmpeg, re-encoded to JPEG.",
+      "is_active": true,
+      "is_available": true
+    },
+    {
+      "key": "porch",
+      "name": "Porch",
+      "lat": 40.7129,
+      "lng": -74.0061,
+      "fps": 10,
+      "source": {
+        "type": "native",
+        "camera_index": 0,
+        "resolution": { "width": 1280, "height": 720 },
+        "hflip": false,
+        "vflip": false
+      },
+      "description": "Native Raspberry Pi camera via picamera2 with hardware JPEG.",
       "is_active": true,
       "is_available": true
     }

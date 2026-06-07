@@ -28,28 +28,130 @@ guide.
 
 ## Camera Config
 
-Create `.ezcams-pi/cameras.json` in the repo (or copy from the example):
+Each entry in `.ezcams-pi/cameras.json` is identified by a URL-safe `key` and
+declares a `source` of one of three types: `native` (picamera2/libcamera),
+`rtsp`, or `http_mjpeg`. The flat `stream_url` field is preserved as a legacy
+shortcut for `http_mjpeg` so existing configs keep working.
+
+### Source types
+
+#### Native Pi camera (`source.type = "native"`)
+
+Captures from a directly-attached camera with hardware JPEG encoding via
+picamera2 + `JpegEncoder`.
 
 ```json
 {
-  "cameras": [
-    {
-      "key": "front-door",
-      "name": "Front Door",
-      "lat": 40.7128,
-      "lng": -74.006,
-      "stream_url": "http://192.168.1.50:8080/video",
-      "snapshot_url": "",
-      "stream_type": "mjpeg",
-      "description": "Front entrance",
-      "is_active": true,
-      "is_available": true
-    }
-  ]
+  "key": "porch",
+  "name": "Porch",
+  "lat": 40.7129,
+  "lng": -74.0061,
+  "fps": 10,
+  "source": {
+    "type": "native",
+    "camera_index": 0,
+    "resolution": { "width": 1280, "height": 720 },
+    "hflip": false,
+    "vflip": false
+  }
 }
 ```
 
-The `stream_url` and `snapshot_url` stay on the Pi. They are not sent to app users.
+Requires the system package on the Pi (not pip-installable):
+
+```bash
+sudo apt install -y python3-picamera2 python3-libcamera
+```
+
+When using a venv, recreate it with `--system-site-packages` so picamera2 is
+importable:
+
+```bash
+python3 -m venv --system-site-packages .venv
+```
+
+#### RTSP (`source.type = "rtsp"`)
+
+Decoded with OpenCV + FFmpeg (`rtsp_transport=tcp`, `low_delay`, buffer size 1)
+and re-encoded to JPEG at `runtime.jpeg_quality`.
+
+```json
+{
+  "key": "backyard",
+  "name": "Backyard",
+  "lat": 40.713,
+  "lng": -74.0058,
+  "fps": 15,
+  "source": {
+    "type": "rtsp",
+    "url": "rtsp://user:pass@192.168.1.60:554/stream1"
+  }
+}
+```
+
+#### HTTP MJPEG (`source.type = "http_mjpeg"`, or legacy `stream_url`)
+
+Pulled with `requests`; JPEG frames are extracted by scanning SOI/EOI markers
+so any continuous JPEG body works.
+
+```json
+{
+  "key": "front-door",
+  "name": "Front Door",
+  "lat": 40.7128,
+  "lng": -74.006,
+  "stream_url": "http://192.168.1.50:8080/video",
+  "snapshot_url": "",
+  "is_active": true,
+  "is_available": true
+}
+```
+
+`stream_url` / `snapshot_url` stay on the Pi. They are not sent to app users.
+
+### Public API mode (testing only)
+
+Set `"allow_public_api": true` in `.ezcams-pi/config.json` to skip signed-request
+checks on `/stream/{camera_key}` and `/snapshot/{camera_key}`. `/health` is
+always public. **Turn this off before production** — anyone who can reach the
+agent port can view your cameras.
+
+```json
+{
+  "allow_public_api": true
+}
+```
+
+You can also enable it temporarily without editing the file:
+
+```bash
+EZCAMS_PI_ALLOW_PUBLIC_API=1 ./.venv/bin/ezcams-pi-agent run
+```
+
+When enabled, startup logs a warning and `/health` returns `"allow_public_api": true`.
+
+### Per-instance runtime tuning (optional)
+
+Add a top-level `runtime` block to `.ezcams-pi/config.json` to tune the camera
+manager. All fields are optional and fall back to safe defaults.
+
+```json
+{
+  "runtime": {
+    "jpeg_quality": 80,
+    "reconnect_delay_seconds": 5.0,
+    "client_start_timeout_seconds": 10.0
+  }
+}
+```
+
+### Architecture
+
+The agent runs a single `CameraManager` with one daemon `CameraWorker` thread
+per active camera. Each worker owns the upstream connection and publishes the
+latest JPEG with push-based fan-out (`asyncio.Event` per subscriber). Many
+viewers share the same upstream — no per-client camera re-opens, and snapshots
+return the most recent cached frame instantly.
 
 ## Install On Raspberry Pi
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 CONFIG_DIR_NAME = ".ezcams-pi"
@@ -25,6 +25,13 @@ def default_config_dir() -> Path:
 
 
 @dataclass(frozen=True)
+class RuntimeConfig:
+    jpeg_quality: int = 80
+    reconnect_delay_seconds: float = 5.0
+    client_start_timeout_seconds: float = 10.0
+
+
+@dataclass(frozen=True)
 class AgentConfig:
     backend_url: str
     device_id: str
@@ -36,17 +43,48 @@ class AgentConfig:
     cert_path: str
     cert_key_path: str
     cameras_path: str
+    allow_public_api: bool = False
+    runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
+
+
+def public_api_enabled(config: AgentConfig) -> bool:
+    """Return True when signed-request auth is disabled for local testing."""
+    env = os.getenv("EZCAMS_PI_ALLOW_PUBLIC_API", "").strip().lower()
+    if env in {"1", "true", "yes", "on"}:
+        return True
+    if env in {"0", "false", "no", "off"}:
+        return False
+    return config.allow_public_api
 
 
 def config_path(config_dir: Path | None = None) -> Path:
     return (config_dir or default_config_dir()) / "config.json"
 
 
+def _runtime_from_raw(raw: object) -> RuntimeConfig:
+    if not isinstance(raw, dict):
+        return RuntimeConfig()
+    defaults = RuntimeConfig()
+    return RuntimeConfig(
+        jpeg_quality=int(raw.get("jpeg_quality", defaults.jpeg_quality)),
+        reconnect_delay_seconds=float(
+            raw.get("reconnect_delay_seconds", defaults.reconnect_delay_seconds)
+        ),
+        client_start_timeout_seconds=float(
+            raw.get("client_start_timeout_seconds", defaults.client_start_timeout_seconds)
+        ),
+    )
+
+
 def load_config(config_dir: Path | None = None) -> AgentConfig:
     path = config_path(config_dir)
     with path.open("r", encoding="utf-8") as f:
         data = json.load(f)
-    return AgentConfig(**data)
+    raw_runtime = data.pop("runtime", None)
+    runtime = _runtime_from_raw(raw_runtime)
+    if "allow_public_api" in data:
+        data["allow_public_api"] = bool(data["allow_public_api"])
+    return AgentConfig(runtime=runtime, **data)
 
 
 def save_config(config: AgentConfig, config_dir: Path | None = None) -> None:

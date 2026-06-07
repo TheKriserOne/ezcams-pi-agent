@@ -24,5 +24,6 @@ dist/
 config.json
 cameras.json
 *.key
+device.secret
 *.crt
 *.pem

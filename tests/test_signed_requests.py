@@ -27,7 +27,7 @@ from ezcams_pi_agent.crypto import (  # noqa: E402
     payload_header_value,
     public_key_pem,
     sign_payload,
-)
+)  # backend signing key helpers for stream auth tests
 
 
 class _FrameHandler(BaseHTTPRequestHandler):
@@ -55,11 +55,11 @@ class SignedRequestTests(unittest.TestCase):
         self.server_thread.start()
         source_url = f"http://127.0.0.1:{self.server.server_port}/frame.jpg"
 
-        private_key_path = self.root / "device.key"
+        device_secret_path = self.root / "device.secret"
         cert_path = self.root / "agent.crt"
         cert_key_path = self.root / "agent-tls.key"
         cameras_path = self.root / "cameras.json"
-        private_key_path.write_text(generate_device_private_key_pem(), encoding="utf-8")
+        device_secret_path.write_text("test-device-secret", encoding="utf-8")
         cert_path.write_text("test-cert", encoding="utf-8")
         cert_key_path.write_text("test-cert-key", encoding="utf-8")
         cameras_path.write_text(
@@ -90,7 +90,7 @@ class SignedRequestTests(unittest.TestCase):
                 static_ip="127.0.0.1",
                 port=8443,
                 backend_public_key_pem=self.backend_public_pem,
-                private_key_path=str(private_key_path),
+                device_secret_path=str(device_secret_path),
                 cert_path=str(cert_path),
                 cert_key_path=str(cert_key_path),
                 cameras_path=str(cameras_path),
@@ -183,7 +183,7 @@ class SignedRequestTests(unittest.TestCase):
                 static_ip="127.0.0.1",
                 port=8443,
                 backend_public_key_pem=self.backend_public_pem,
-                private_key_path=str(self.root / "device.key"),
+                device_secret_path=str(self.root / "device.secret"),
                 cert_path=str(self.root / "agent.crt"),
                 cert_key_path=str(self.root / "agent-tls.key"),
                 cameras_path=str(self.root / "cameras.json"),

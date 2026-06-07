@@ -7,7 +7,7 @@ from pathlib import Path
 
 import uvicorn
 
-from ezcams_pi_agent.backend_client import get_device_token, heartbeat_once, sync_cameras_once
+from ezcams_pi_agent.backend_client import heartbeat_once, sync_cameras_once
 from ezcams_pi_agent.config import config_path, default_config_dir, load_config
 from ezcams_pi_agent.setup import setup_agent
 
@@ -47,9 +47,8 @@ def _sync_once(args: argparse.Namespace) -> None:
     config = load_config()
 
     async def run() -> None:
-        token = await get_device_token(config)
-        await heartbeat_once(config, token)
-        await sync_cameras_once(config, token)
+        await heartbeat_once(config)
+        await sync_cameras_once(config)
 
     asyncio.run(run())
     print("Heartbeat and camera sync completed")

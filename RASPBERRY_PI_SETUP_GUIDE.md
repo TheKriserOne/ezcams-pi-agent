@@ -135,8 +135,9 @@ This creates local Pi secrets under:
 /etc/ezcams-pi/
 ```
 
-The Pi private key stays on the Pi. The backend stores only the Pi public key and
-the Pi HTTPS certificate.
+The backend returns a one-time `device_secret`; the Pi saves it as `/etc/ezcams-pi/device.secret`.
+Only a hash of that secret is stored server-side. The Pi HTTPS certificate is also registered
+for backend→Pi stream requests.
 
 ## 6. Configure Local Cameras
 

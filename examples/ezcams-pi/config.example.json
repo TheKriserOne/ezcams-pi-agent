@@ -5,7 +5,7 @@
   "static_ip": "192.168.1.113",
   "port": 8443,
   "backend_public_key_pem": "-----BEGIN PUBLIC KEY-----\nREPLACE-WITH-BACKEND-PUBLIC-KEY\n-----END PUBLIC KEY-----\n",
-  "private_key_path": "/path/to/ezcams-pi-agent/.ezcams-pi/device.key",
+  "device_secret_path": "/path/to/ezcams-pi-agent/.ezcams-pi/device.secret",
   "cert_path": "/path/to/ezcams-pi-agent/.ezcams-pi/agent.crt",
   "cert_key_path": "/path/to/ezcams-pi-agent/.ezcams-pi/agent-tls.key",
   "cameras_path": "/path/to/ezcams-pi-agent/.ezcams-pi/cameras.json",

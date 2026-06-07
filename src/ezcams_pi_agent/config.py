@@ -39,7 +39,7 @@ class AgentConfig:
     static_ip: str
     port: int
     backend_public_key_pem: str
-    private_key_path: str
+    device_secret_path: str
     cert_path: str
     cert_key_path: str
     cameras_path: str

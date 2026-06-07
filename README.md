@@ -13,10 +13,14 @@ By default, setup writes agent files into `.ezcams-pi/` at the repository root:
 .ezcams-pi/
   config.json
   cameras.json
-  device.key
+  device.secret
   agent.crt
   agent-tls.key
 ```
+
+`device.secret` is issued once at `setup` and sent as `Authorization: Bearer …` for
+heartbeat and camera sync. Stream/snapshot requests from the backend still require
+signed `X-EZCams-*` headers verified with `backend_public_key_pem`.
 
 That directory is gitignored so keys, certs, and local settings are not committed.
 Override the location with `--config-dir` or the `EZCAMS_PI_CONFIG_DIR` environment
@@ -222,6 +226,8 @@ return the most recent cached frame instantly.
    ```
 
 The unsigned stream request should return `401`. A stream should work through `cams-server` only after the backend signs the Pi request.
+
+After `setup`, the Pi stores a `device.secret` credential for backend heartbeat/camera sync. Backend→Pi stream requests still use signed `X-EZCams-*` headers verified with the backend public key in `config.json`.
 
 ## Camera Router
 

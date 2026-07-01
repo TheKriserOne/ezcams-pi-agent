@@ -37,11 +37,33 @@ async def sync_cameras_once(config: AgentConfig) -> None:
         resp.raise_for_status()
 
 
+async def unregister_once(config: AgentConfig) -> None:
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            f"{config.backend_url.rstrip('/')}/devices/unregister",
+            headers=_device_auth_header(config),
+        )
+        resp.raise_for_status()
+
+
 async def background_sync_loop(config: AgentConfig, interval_seconds: int = 30) -> None:
+    backoff_seconds = interval_seconds
     while True:
         try:
             await heartbeat_once(config)
             await sync_cameras_once(config)
+            backoff_seconds = interval_seconds
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            if status in {401, 404}:
+                log.error(
+                    "backend rejected device credentials (%s); camera service stays running",
+                    status,
+                )
+            else:
+                log.warning("backend sync failed: HTTP %s", status)
+            backoff_seconds = min(max(backoff_seconds * 2, interval_seconds), 300)
         except Exception as exc:
             log.warning("backend sync failed: %s", exc)
-        await asyncio.sleep(interval_seconds)
+            backoff_seconds = min(max(backoff_seconds * 2, interval_seconds), 300)
+        await asyncio.sleep(backoff_seconds)

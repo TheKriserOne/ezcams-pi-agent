@@ -28,6 +28,7 @@ def setup_agent(
     cert_path = root / "agent.crt"
     cert_key_path = root / "agent-tls.key"
     cameras_path = root / "cameras.json"
+    recordings_dir = root / "clips"
 
     if force or not cert_path.exists() or not cert_key_path.exists():
         cert_pem, cert_key_pem = generate_self_signed_cert(static_ip, name)
@@ -62,6 +63,7 @@ def setup_agent(
         cert_path=str(cert_path),
         cert_key_path=str(cert_key_path),
         cameras_path=str(cameras_path),
+        recordings_dir=str(recordings_dir),
     )
     save_config(config, root)
     write_empty_camera_file(cameras_path)

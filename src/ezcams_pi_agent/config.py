@@ -46,6 +46,7 @@ class AgentConfig:
     cert_path: str
     cert_key_path: str
     cameras_path: str
+    recordings_dir: str = ""
     allow_loopback_unsigned: bool = True
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
 

@@ -176,6 +176,8 @@ and dashes. Example: `front-door`.
 For a quick foreground test, run:
 
 ```bash
+sudo /opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent ensure \
+  --config-dir /etc/ezcams-pi
 sudo /opt/ezcams-pi-agent/.venv/bin/python -m ezcams_pi_agent run \
   --config-dir /etc/ezcams-pi
 ```
@@ -195,6 +197,10 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now ezcams-pi-agent
 ```
 
+The service runs `ensure` before `run` and uses `Restart=always`, so camera
+access resumes after power loss. Backend network outages log warnings; rejected
+device credentials fail preflight and systemd retries.
+
 Check status:
 
 ```bash
@@ -206,6 +212,16 @@ Watch logs:
 ```bash
 sudo journalctl -u ezcams-pi-agent -f
 ```
+
+To remove this Pi cleanly while it can still reach the backend:
+
+```bash
+sudo /opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent unregister \
+  --config-dir /etc/ezcams-pi
+```
+
+Use `--local-only` only when the backend cannot be reached; then revoke the Pi
+from the app later because the backend will not know local files were removed.
 
 ## 8. Configure Router Port Forwarding
 
@@ -230,6 +246,9 @@ Unsigned stream access should fail:
 ```bash
 curl -k https://YOUR_PUBLIC_HOST_OR_IP:8443/stream/front-door
 ```
+
+Backend probes use signed `GET /backend/heartbeat`; direct unsigned calls should
+return `401`.
 
 Expected result:
 

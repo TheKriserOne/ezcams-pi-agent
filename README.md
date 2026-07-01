@@ -13,6 +13,7 @@ By default, setup writes agent files into `.ezcams-pi/` at the repository root:
 .ezcams-pi/
   config.json
   cameras.json
+  clips/
   device.secret
   agent.crt
   agent-tls.key
@@ -29,6 +30,11 @@ variable.
 Example templates live in `examples/ezcams-pi/`. After `setup`, edit
 `.ezcams-pi/cameras.json` using `examples/ezcams-pi/cameras.example.json` as a
 guide.
+
+`recordings_dir` in `config.json` points at Pi-local event clips. `setup`
+defaults it to `.ezcams-pi/clips`, and `ezcams-pi-inference` writes there unless
+`--clip-dir` is passed. V1 does not auto-delete recordings; monitor free disk
+space or prune old `.mkv` files manually.
 
 ## Camera Config
 
@@ -119,6 +125,10 @@ Remote `/stream/{camera_key}` and `/snapshot/{camera_key}` requests require
 valid `X-EZCams-Payload` and `X-EZCams-Signature` headers from the backend.
 Unsigned remote requests return **401**. `/health` is always public.
 
+Remote `/recordings/{camera_key}` and `/recordings/{camera_key}/{recording_id}`
+use the same backend signature check. Recording IDs are `.mkv` filenames under
+that camera's clip directory.
+
 On-device inference may pull frames over `https://127.0.0.1:{port}/stream/{key}`
 without signatures when `allow_loopback_unsigned` is true (default). Disable
 with `"allow_loopback_unsigned": false` or `EZCAMS_PI_ALLOW_LOOPBACK_UNSIGNED=0`.
@@ -187,6 +197,7 @@ return the most recent cached frame instantly.
 5. Run the Pi agent in the foreground for a quick test:
 
    ```bash
+   ./.venv/bin/ezcams-pi-agent ensure
    ./.venv/bin/python -m ezcams_pi_agent run
    ```
 
@@ -204,6 +215,12 @@ return the most recent cached frame instantly.
    sudo systemctl enable --now ezcams-pi-agent
    ```
 
+   The service runs `ezcams-pi-agent ensure` before startup and restarts
+   automatically. If the backend is temporarily unreachable, `ensure` prints a
+   warning but still lets the camera service start. If backend credentials are
+   rejected, `ensure` exits nonzero so systemd keeps retrying instead of hiding
+   a broken registration.
+
 7. Forward router TCP port `8443` to the Pi LAN IP port `8443`.
 
 8. Verify from another terminal:
@@ -217,6 +234,21 @@ return the most recent cached frame instantly.
 The unsigned stream request should return `401`. A stream should work through `cams-server` only after the backend signs the Pi request.
 
 After `setup`, the Pi stores a `device.secret` credential for backend heartbeat/camera sync. Backend→Pi stream requests still use signed `X-EZCams-*` headers verified with the backend public key in `config.json`.
+
+To remove this Pi from the backend while it is still online:
+
+```bash
+./.venv/bin/ezcams-pi-agent unregister
+```
+
+If the backend is unreachable and you only want to remove local registration
+files, use:
+
+```bash
+./.venv/bin/ezcams-pi-agent unregister --local-only
+```
+
+`--local-only` does not notify the backend; revoke the Pi in the app later.
 
 ## Camera Router
 

@@ -12,6 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -59,6 +60,7 @@ class SignedRequestTests(unittest.TestCase):
         cert_path = self.root / "agent.crt"
         cert_key_path = self.root / "agent-tls.key"
         cameras_path = self.root / "cameras.json"
+        recordings_dir = self.root / "clips"
         device_secret_path.write_text("test-device-secret", encoding="utf-8")
         cert_path.write_text("test-cert", encoding="utf-8")
         cert_key_path.write_text("test-cert-key", encoding="utf-8")
@@ -82,6 +84,11 @@ class SignedRequestTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
+        clip_dir = recordings_dir / "front-door"
+        clip_dir.mkdir(parents=True)
+        self.recording_name = "front-door_20260701_120000.mkv"
+        self.recording_bytes = b"test-mkv-bytes"
+        (clip_dir / self.recording_name).write_bytes(self.recording_bytes)
         save_config(
             AgentConfig(
                 backend_url="https://backend.example",
@@ -94,6 +101,7 @@ class SignedRequestTests(unittest.TestCase):
                 cert_path=str(cert_path),
                 cert_key_path=str(cert_key_path),
                 cameras_path=str(cameras_path),
+                recordings_dir=str(recordings_dir),
             ),
             self.root,
         )
@@ -105,9 +113,6 @@ class SignedRequestTests(unittest.TestCase):
         self.client = TestClient(agent_main.app)
 
     def tearDown(self) -> None:
-        self.server.shutdown()
-        self.server.server_close()
-        self.tmp.cleanup()
         agent_main._config = None
         manager = agent_main._manager
         agent_main._manager = None
@@ -116,6 +121,9 @@ class SignedRequestTests(unittest.TestCase):
                 manager.stop()
             except Exception:
                 pass
+        self.server.shutdown()
+        self.server.server_close()
+        self.tmp.cleanup()
         agent_main._used_nonces.clear()
 
     def _headers(
@@ -173,6 +181,70 @@ class SignedRequestTests(unittest.TestCase):
         self.assertEqual(first.status_code, 200)
         self.assertEqual(first.content, b"\xff\xd8\xff\xd9")
         self.assertEqual(second.status_code, 401)
+
+    def test_unsigned_recordings_request_is_rejected(self) -> None:
+        response = self.client.get("/recordings/front-door")
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_unsigned_backend_heartbeat_is_rejected(self) -> None:
+        response = self.client.get("/backend/heartbeat")
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_valid_signed_backend_heartbeat_returns_device_health(self) -> None:
+        response = self.client.get(
+            "/backend/heartbeat",
+            headers=self._headers(
+                action="device:heartbeat",
+                path="/backend/heartbeat",
+                nonce="nonce-device-heartbeat",
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["device_id"], self.device_id)
+        self.assertIn(data["status"], {"ok", "degraded"})
+
+    def test_valid_signed_recordings_list_returns_camera_clips(self) -> None:
+        response = self.client.get(
+            "/recordings/front-door",
+            headers=self._headers(
+                action="recordings:list",
+                path="/recordings/front-door",
+                nonce="nonce-recordings-list",
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["recordings"][0]["id"], self.recording_name)
+        self.assertEqual(data["recordings"][0]["size_bytes"], len(self.recording_bytes))
+
+    def test_valid_signed_recording_download_streams_clip(self) -> None:
+        path = f"/recordings/front-door/{self.recording_name}"
+        response = self.client.get(
+            path,
+            headers=self._headers(
+                action="recordings:download",
+                path=path,
+                nonce="nonce-recording-download",
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, self.recording_bytes)
+        self.assertIn("video/x-matroska", response.headers.get("content-type", ""))
+
+    def test_recording_path_traversal_is_rejected(self) -> None:
+        config = agent_main._get_config()
+        camera = agent_main.find_camera(config.cameras_path, "front-door")
+        self.assertIsNotNone(camera)
+
+        with self.assertRaises(HTTPException) as ctx:
+            agent_main._recording_path(config, camera, "../secret.mkv")
+        self.assertEqual(ctx.exception.status_code, 404)
 
 
 if __name__ == "__main__":

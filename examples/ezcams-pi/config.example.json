@@ -9,6 +9,7 @@
   "cert_path": "/path/to/ezcams-pi-agent/.ezcams-pi/agent.crt",
   "cert_key_path": "/path/to/ezcams-pi-agent/.ezcams-pi/agent-tls.key",
   "cameras_path": "/path/to/ezcams-pi-agent/.ezcams-pi/cameras.json",
+  "recordings_dir": "/path/to/ezcams-pi-agent/.ezcams-pi/clips",
   "runtime": {
     "jpeg_quality": 80,
     "reconnect_delay_seconds": 5.0,

@@ -51,7 +51,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--infer-fps", type=float, default=5.0, help="Inference rate per camera (default 5).")
     p.add_argument("--score-thres", type=float, default=0.4, help="Min person score (default 0.4).")
     p.add_argument("--max-boxes", type=int, default=50, help="Max person boxes per frame (default 50).")
-    p.add_argument("--clip-dir", default="clips", help="Where to write clips (default ./clips).")
+    p.add_argument(
+        "--clip-dir",
+        default=None,
+        help="Where to write clips (default config recordings_dir / .ezcams-pi/clips).",
+    )
     p.add_argument("--min-clip-seconds", type=float, default=10.0, help="Minimum clip length (default 10).")
     p.add_argument(
         "--grace-seconds",
@@ -94,6 +98,15 @@ def _resolve(args: argparse.Namespace) -> InferenceConfig | None:
         log.error("No --cameras given and agent config unavailable.")
         return None
 
+    if args.clip_dir:
+        clip_dir = Path(args.clip_dir).expanduser()
+    elif agent_cfg is not None and agent_cfg.recordings_dir:
+        clip_dir = Path(agent_cfg.recordings_dir).expanduser()
+    elif agent_cfg is not None:
+        clip_dir = Path(agent_cfg.cameras_path).expanduser().parent / "clips"
+    else:
+        clip_dir = Path("clips")
+
     return InferenceConfig(
         hef_path=Path(args.hef).expanduser(),
         agent_url=agent_url,
@@ -101,7 +114,7 @@ def _resolve(args: argparse.Namespace) -> InferenceConfig | None:
         infer_fps=args.infer_fps,
         score_threshold=args.score_thres,
         max_boxes=args.max_boxes,
-        clip_dir=Path(args.clip_dir).expanduser(),
+        clip_dir=clip_dir,
         min_clip_seconds=args.min_clip_seconds,
         grace_seconds=args.grace_seconds,
         trigger_frames=args.trigger_frames,

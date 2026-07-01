@@ -113,26 +113,15 @@ so any continuous JPEG body works.
 
 `stream_url` / `snapshot_url` stay on the Pi. They are not sent to app users.
 
-### Public API mode (testing only)
+### Stream access
 
-Set `"allow_public_api": true` in `.ezcams-pi/config.json` to skip signed-request
-checks on `/stream/{camera_key}` and `/snapshot/{camera_key}`. `/health` is
-always public. **Turn this off before production** — anyone who can reach the
-agent port can view your cameras.
+Remote `/stream/{camera_key}` and `/snapshot/{camera_key}` requests require
+valid `X-EZCams-Payload` and `X-EZCams-Signature` headers from the backend.
+Unsigned remote requests return **401**. `/health` is always public.
 
-```json
-{
-  "allow_public_api": true
-}
-```
-
-You can also enable it temporarily without editing the file:
-
-```bash
-EZCAMS_PI_ALLOW_PUBLIC_API=1 ./.venv/bin/ezcams-pi-agent run
-```
-
-When enabled, startup logs a warning and `/health` returns `"allow_public_api": true`.
+On-device inference may pull frames over `https://127.0.0.1:{port}/stream/{key}`
+without signatures when `allow_loopback_unsigned` is true (default). Disable
+with `"allow_loopback_unsigned": false` or `EZCAMS_PI_ALLOW_LOOPBACK_UNSIGNED=0`.
 
 ### Per-instance runtime tuning (optional)
 

@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 ezcams-pi-agent = "ezcams_pi_agent.cli:main"
+ezcams-pi-inference = "ezcams_pi_agent.inference.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]

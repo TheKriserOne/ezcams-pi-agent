@@ -174,32 +174,6 @@ class SignedRequestTests(unittest.TestCase):
         self.assertEqual(first.content, b"\xff\xd8\xff\xd9")
         self.assertEqual(second.status_code, 401)
 
-    def test_public_api_allows_unsigned_snapshot(self) -> None:
-        save_config(
-            AgentConfig(
-                backend_url="https://backend.example",
-                device_id=self.device_id,
-                name="Test Pi",
-                static_ip="127.0.0.1",
-                port=8443,
-                backend_public_key_pem=self.backend_public_pem,
-                device_secret_path=str(self.root / "device.secret"),
-                cert_path=str(self.root / "agent.crt"),
-                cert_key_path=str(self.root / "agent-tls.key"),
-                cameras_path=str(self.root / "cameras.json"),
-                allow_public_api=True,
-            ),
-            self.root,
-        )
-        agent_main._config = None
-
-        response = self.client.get("/snapshot/front-door")
-        health = self.client.get("/health")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, b"\xff\xd8\xff\xd9")
-        self.assertTrue(health.json()["allow_public_api"])
-
 
 if __name__ == "__main__":
     unittest.main()

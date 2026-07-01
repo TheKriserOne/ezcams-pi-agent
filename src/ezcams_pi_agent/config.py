@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 CONFIG_DIR_NAME = ".ezcams-pi"
 
@@ -43,18 +46,23 @@ class AgentConfig:
     cert_path: str
     cert_key_path: str
     cameras_path: str
-    allow_public_api: bool = False
+    allow_loopback_unsigned: bool = True
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
 
 
-def public_api_enabled(config: AgentConfig) -> bool:
-    """Return True when signed-request auth is disabled for local testing."""
-    env = os.getenv("EZCAMS_PI_ALLOW_PUBLIC_API", "").strip().lower()
+def loopback_unsigned_enabled(config: AgentConfig) -> bool:
+    """Return True when same-host (loopback) requests may skip signed-request auth.
+
+    This lets the on-device inference process pull camera frames over localhost
+    without the backend's signing key. It applies only to loopback peers, never
+    to LAN/WAN clients. Override with EZCAMS_PI_ALLOW_LOOPBACK_UNSIGNED.
+    """
+    env = os.getenv("EZCAMS_PI_ALLOW_LOOPBACK_UNSIGNED", "").strip().lower()
     if env in {"1", "true", "yes", "on"}:
         return True
     if env in {"0", "false", "no", "off"}:
         return False
-    return config.allow_public_api
+    return config.allow_loopback_unsigned
 
 
 def config_path(config_dir: Path | None = None) -> Path:
@@ -77,13 +85,26 @@ def _runtime_from_raw(raw: object) -> RuntimeConfig:
 
 
 def load_config(config_dir: Path | None = None) -> AgentConfig:
-    path = config_path(config_dir)
+    cfg_dir = config_dir or default_config_dir()
+    path = config_path(cfg_dir)
     with path.open("r", encoding="utf-8") as f:
         data = json.load(f)
     raw_runtime = data.pop("runtime", None)
     runtime = _runtime_from_raw(raw_runtime)
-    if "allow_public_api" in data:
-        data["allow_public_api"] = bool(data["allow_public_api"])
+    if "allow_loopback_unsigned" in data:
+        data["allow_loopback_unsigned"] = bool(data["allow_loopback_unsigned"])
+    # Tolerate configs written by older agent versions: drop keys the current
+    # schema no longer accepts (e.g. the pre-bearer-auth private_key_path) and
+    # fall back to the standard path for newly-required keys, so a slightly
+    # stale config does not hard-crash the agent.
+    known = {f.name for f in fields(AgentConfig)} - {"runtime"}
+    unknown = sorted(set(data) - known)
+    if unknown:
+        log.warning("ignoring unknown config keys: %s", ", ".join(unknown))
+        for key in unknown:
+            data.pop(key, None)
+    if "device_secret_path" not in data:
+        data["device_secret_path"] = str(Path(cfg_dir) / "device.secret")
     return AgentConfig(runtime=runtime, **data)
 
 

@@ -19,7 +19,7 @@ from ezcams_pi_agent.camera_manager import (
     open_camera_stream_async,
 )
 from ezcams_pi_agent.cameras import LocalCamera, find_camera
-from ezcams_pi_agent.config import AgentConfig, load_config, public_api_enabled
+from ezcams_pi_agent.config import AgentConfig, load_config, loopback_unsigned_enabled
 from ezcams_pi_agent.crypto import payload_from_header, verify_payload_signature
 from ezcams_pi_agent.streams.common import MJPEG_MEDIA_TYPE
 
@@ -86,8 +86,17 @@ async def _verify_backend_request(
     if camera is None or not camera.is_active:
         raise HTTPException(status_code=404, detail="Camera not found")
 
-    if public_api_enabled(config):
-        return config, camera
+    # Same-host trust: the on-device inference process pulls frames over the
+    # loopback interface and cannot produce backend signatures. Accept unsigned
+    # requests only when the real socket peer is localhost. We read
+    # request.client.host (the actual TCP peer), not a spoofable forwarded
+    # header, and the agent serves uvicorn directly (no same-host reverse
+    # proxy), so a remote client cannot masquerade as loopback. Disable with
+    # allow_loopback_unsigned=false / EZCAMS_PI_ALLOW_LOOPBACK_UNSIGNED=0.
+    if loopback_unsigned_enabled(config):
+        client = request.client
+        if client is not None and client.host in {"127.0.0.1", "::1"}:
+            return config, camera
 
     payload_header = request.headers.get("X-EZCams-Payload", "")
     signature = request.headers.get("X-EZCams-Signature", "")
@@ -144,11 +153,6 @@ async def _lifespan(app: FastAPI):
         config = None
 
     if config is not None:
-        if public_api_enabled(config):
-            log.warning(
-                "allow_public_api is enabled: /stream and /snapshot accept "
-                "unsigned requests (testing only)"
-            )
         try:
             _get_manager()
         except Exception as exc:
@@ -189,8 +193,7 @@ app = FastAPI(title="EZ Cams Pi Agent", version="0.1.0", lifespan=_lifespan)
 async def health():
     payload: dict = {"status": "ok"}
     try:
-        config = _get_config()
-        payload["allow_public_api"] = public_api_enabled(config)
+        _get_config()
     except Exception as exc:
         log.warning("Pi agent health check failed: %s", exc)
         return {"status": "error", "error": str(exc)}

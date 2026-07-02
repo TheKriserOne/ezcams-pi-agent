@@ -7,10 +7,10 @@ Run the Pi agent in the foreground for a quick test, or install the included
 
 ## Local Config
 
-By default, setup writes agent files into `.ezcams-pi/` at the repository root:
+All runtime state lives in **one directory** next to the install:
 
 ```text
-.ezcams-pi/
+<install>/.ezcams-pi/
   config.json
   cameras.json
   clips/
@@ -19,22 +19,27 @@ By default, setup writes agent files into `.ezcams-pi/` at the repository root:
   agent-tls.key
 ```
 
+For a clone at `/opt/ezcams-pi-agent`, that is `/opt/ezcams-pi-agent/.ezcams-pi/`.
+For this dev tree, it is `./.ezcams-pi/` at the repo root.
+
 `device.secret` is issued once at `setup` and sent as `Authorization: Bearer …` for
 heartbeat and camera sync. Stream/snapshot requests from the backend still require
 signed `X-EZCams-*` headers verified with `backend_public_key_pem`.
 
-That directory is gitignored so keys, certs, and local settings are not committed.
-Override the location with `--config-dir` or the `EZCAMS_PI_CONFIG_DIR` environment
-variable.
+Path fields in `config.json` are stored **relative to `.ezcams-pi/`** so the
+install folder is self-contained and portable.
 
-Example templates live in `examples/ezcams-pi/`. After `setup`, edit
-`.ezcams-pi/cameras.json` using `examples/ezcams-pi/cameras.example.json` as a
+The whole `.ezcams-pi/` tree is gitignored so keys, certs, cameras, and clips are
+never committed. Example templates live in `examples/ezcams-pi/`. After `setup`,
+edit `.ezcams-pi/cameras.json` using `examples/ezcams-pi/cameras.example.json` as a
 guide.
 
-`recordings_dir` in `config.json` points at Pi-local event clips. `setup`
-defaults it to `.ezcams-pi/clips`, and `ezcams-pi-inference` writes there unless
-`--clip-dir` is passed. V1 does not auto-delete recordings; monitor free disk
-space or prune old `.mkv` files manually.
+`recordings_dir` defaults to `clips/` under `.ezcams-pi/`. `ezcams-pi-inference`
+writes there unless `--clip-dir` is passed. V1 does not auto-delete recordings;
+monitor free disk space or prune old `.mkv` files manually.
+
+Advanced override only: `--config-dir` or `EZCAMS_PI_CONFIG_DIR` (tests, custom
+layouts). Normal installs should not need either.
 
 ## Camera Config
 

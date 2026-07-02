@@ -129,22 +129,22 @@ sudo /opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent setup \
   --port 8443
 ```
 
-This creates local Pi secrets under:
+This creates local Pi secrets under the install directory:
 
 ```text
-/etc/ezcams-pi/
+/opt/ezcams-pi-agent/.ezcams-pi/
 ```
 
-The backend returns a one-time `device_secret`; the Pi saves it as `/etc/ezcams-pi/device.secret`.
-Only a hash of that secret is stored server-side. The Pi HTTPS certificate is also registered
-for backend→Pi stream requests.
+The backend returns a one-time `device_secret`; the Pi saves it as
+`.ezcams-pi/device.secret`. Only a hash of that secret is stored server-side.
+The Pi HTTPS certificate is also registered for backend→Pi stream requests.
 
 ## 6. Configure Local Cameras
 
 Edit:
 
 ```bash
-sudo nano /etc/ezcams-pi/cameras.json
+nano /opt/ezcams-pi-agent/.ezcams-pi/cameras.json
 ```
 
 Example:
@@ -176,30 +176,24 @@ and dashes. Example: `front-door`.
 For a quick foreground test, run:
 
 ```bash
-sudo /opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent ensure \
-  --config-dir /etc/ezcams-pi
-sudo /opt/ezcams-pi-agent/.venv/bin/python -m ezcams_pi_agent run \
-  --config-dir /etc/ezcams-pi
-```
-
-The console script also works:
-
-```bash
-sudo /opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent run \
-  --config-dir /etc/ezcams-pi
+cd /opt/ezcams-pi-agent
+./.venv/bin/ezcams-pi-agent ensure
+./.venv/bin/ezcams-pi-agent run
 ```
 
 For production, install the systemd service:
 
 ```bash
-sudo cp /opt/ez-cams/cams-pi-agent/systemd/ezcams-pi-agent.service /etc/systemd/system/
+sudo cp /opt/ezcams-pi-agent/systemd/ezcams-pi-agent.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now ezcams-pi-agent
 ```
 
-The service runs `ensure` before `run` and uses `Restart=always`, so camera
-access resumes after power loss. Backend network outages log warnings; rejected
-device credentials fail preflight and systemd retries.
+The service uses `WorkingDirectory=/opt/ezcams-pi-agent` so config stays in
+`/opt/ezcams-pi-agent/.ezcams-pi/`. It runs `ensure` before `run` and uses
+`Restart=always`, so camera access resumes after power loss. Backend network
+outages log warnings; rejected device credentials fail preflight and systemd
+retries.
 
 Check status:
 
@@ -216,8 +210,8 @@ sudo journalctl -u ezcams-pi-agent -f
 To remove this Pi cleanly while it can still reach the backend:
 
 ```bash
-sudo /opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent unregister \
-  --config-dir /etc/ezcams-pi
+cd /opt/ezcams-pi-agent
+./.venv/bin/ezcams-pi-agent unregister
 ```
 
 Use `--local-only` only when the backend cannot be reached; then revoke the Pi
@@ -264,7 +258,8 @@ requests.
 Force one heartbeat and camera sync:
 
 ```bash
-sudo /opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent sync-once
+cd /opt/ezcams-pi-agent
+./.venv/bin/ezcams-pi-agent sync-once
 ```
 
 On your backend:
@@ -308,7 +303,8 @@ public host/IP and forwarded port, or revoke the old device and register again.
 If `/cams/` does not show the Pi camera, run:
 
 ```bash
-sudo /opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent sync-once
+cd /opt/ezcams-pi-agent
+./.venv/bin/ezcams-pi-agent sync-once
 ```
 
 Then check:

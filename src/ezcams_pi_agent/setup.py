@@ -59,11 +59,11 @@ def setup_agent(
         static_ip=static_ip,
         port=port,
         backend_public_key_pem=str(data["backend_public_key_pem"]),
-        device_secret_path=str(device_secret_path),
-        cert_path=str(cert_path),
-        cert_key_path=str(cert_key_path),
-        cameras_path=str(cameras_path),
-        recordings_dir=str(recordings_dir),
+        device_secret_path="device.secret",
+        cert_path="agent.crt",
+        cert_key_path="agent-tls.key",
+        cameras_path="cameras.json",
+        recordings_dir="clips",
     )
     save_config(config, root)
     write_empty_camera_file(cameras_path)

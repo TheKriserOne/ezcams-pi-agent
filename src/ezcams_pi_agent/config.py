@@ -9,22 +9,48 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 CONFIG_DIR_NAME = ".ezcams-pi"
+_CONFIG_PATH_FIELDS = (
+    "device_secret_path",
+    "cert_path",
+    "cert_key_path",
+    "cameras_path",
+    "recordings_dir",
+)
 
 
-def repo_root() -> Path | None:
+def install_root() -> Path:
+    """Return the agent install directory (repo root or current working directory)."""
     here = Path(__file__).resolve()
     for parent in here.parents:
         if (parent / "pyproject.toml").is_file():
             return parent
-    return None
+    return Path.cwd()
 
 
 def default_config_dir() -> Path:
+    """Local state directory beside the install: ``<install>/.ezcams-pi/``.
+
+    Override only for tests or unusual layouts via ``EZCAMS_PI_CONFIG_DIR`` or
+    ``--config-dir``.
+    """
     if env_dir := os.getenv("EZCAMS_PI_CONFIG_DIR"):
         return Path(env_dir)
-    if root := repo_root():
-        return root / CONFIG_DIR_NAME
-    return Path.cwd() / CONFIG_DIR_NAME
+    return install_root() / CONFIG_DIR_NAME
+
+
+def resolve_config_path(path: str | Path, config_dir: Path) -> str:
+    raw = Path(path).expanduser()
+    if raw.is_absolute():
+        return str(raw)
+    return str((config_dir / raw).resolve())
+
+
+def relativize_config_path(path: str | Path, config_dir: Path) -> str:
+    raw = Path(path).expanduser()
+    try:
+        return str(raw.resolve().relative_to(config_dir.resolve()))
+    except ValueError:
+        return str(raw)
 
 
 @dataclass(frozen=True)
@@ -105,7 +131,10 @@ def load_config(config_dir: Path | None = None) -> AgentConfig:
         for key in unknown:
             data.pop(key, None)
     if "device_secret_path" not in data:
-        data["device_secret_path"] = str(Path(cfg_dir) / "device.secret")
+        data["device_secret_path"] = "device.secret"
+    for key in _CONFIG_PATH_FIELDS:
+        if key in data and data[key]:
+            data[key] = resolve_config_path(data[key], cfg_dir)
     return AgentConfig(runtime=runtime, **data)
 
 
@@ -114,8 +143,12 @@ def save_config(config: AgentConfig, config_dir: Path | None = None) -> None:
     root.mkdir(parents=True, exist_ok=True)
     root.chmod(0o700)
     path = config_path(root)
+    payload = asdict(config)
+    for key in _CONFIG_PATH_FIELDS:
+        if payload.get(key):
+            payload[key] = relativize_config_path(payload[key], root)
     with path.open("w", encoding="utf-8") as f:
-        json.dump(asdict(config), f, indent=2)
+        json.dump(payload, f, indent=2)
         f.write("\n")
     path.chmod(0o600)
 

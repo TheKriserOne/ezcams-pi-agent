@@ -6,9 +6,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/ezcams-pi-agent
-Environment=EZCAMS_PI_CONFIG_DIR=/etc/ezcams-pi
-ExecStartPre=/opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent ensure --config-dir /etc/ezcams-pi
-ExecStart=/opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent run --config-dir /etc/ezcams-pi
+ExecStartPre=/opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent ensure
+ExecStart=/opt/ezcams-pi-agent/.venv/bin/ezcams-pi-agent run
 Restart=always
 RestartSec=5
 

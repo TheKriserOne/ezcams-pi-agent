@@ -19,11 +19,17 @@ dist/
 
 .DS_Store
 
+# Local agent state (setup, secrets, cameras, clips) — never commit
 .ezcams-pi/
 
+# Stray copies if written outside .ezcams-pi/
 config.json
 cameras.json
+clips/
 *.key
 device.secret
 *.crt
 *.pem
+
+# Runtime logs
+hailort*.log

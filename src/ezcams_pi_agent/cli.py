@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import httpx
 import uvicorn
 
-from ezcams_pi_agent.backend_client import heartbeat_once, sync_cameras_once, unregister_once
+from ezcams_pi_agent.backend_client import sync_cameras_once, unregister_once
 from ezcams_pi_agent.config import config_path, default_config_dir, load_config, read_text
 from ezcams_pi_agent.setup import setup_agent
 
@@ -50,11 +50,10 @@ def _sync_once(args: argparse.Namespace) -> None:
     config = load_config()
 
     async def run() -> None:
-        await heartbeat_once(config)
         await sync_cameras_once(config)
 
     asyncio.run(run())
-    print("Heartbeat and camera sync completed")
+    print("Camera sync completed")
 
 
 def _set_config_dir_arg(args: argparse.Namespace) -> Path:
@@ -94,7 +93,7 @@ def _ensure(args: argparse.Namespace) -> int:
 
     async def run() -> int:
         try:
-            await heartbeat_once(config)
+            await sync_cameras_once(config)
             print("EZ Cams Pi config valid; backend accepted device credentials.")
             return 0
         except httpx.HTTPStatusError as exc:
@@ -192,7 +191,7 @@ def main() -> None:
     run.add_argument("--config-dir", default="")
     run.set_defaults(func=_run)
 
-    sync_once = sub.add_parser("sync-once", help="Send one heartbeat and camera sync")
+    sync_once = sub.add_parser("sync-once", help="Sync camera list with backend")
     sync_once.add_argument("--config-dir", default="")
     sync_once.set_defaults(func=_sync_once)
 

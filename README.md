@@ -23,7 +23,7 @@ For a clone at `/opt/ezcams-pi-agent`, that is `/opt/ezcams-pi-agent/.ezcams-pi/
 For this dev tree, it is `./.ezcams-pi/` at the repo root.
 
 `device.secret` is issued once at `setup` and sent as `Authorization: Bearer …` for
-heartbeat and camera sync. Stream/snapshot requests from the backend still require
+camera sync and unregister. Stream/snapshot requests from the backend still require
 signed `X-EZCams-*` headers verified with `backend_public_key_pem`.
 
 Path fields in `config.json` are stored **relative to `.ezcams-pi/`** so the
@@ -238,7 +238,7 @@ return the most recent cached frame instantly.
 
 The unsigned stream request should return `401`. A stream should work through `cams-server` only after the backend signs the Pi request.
 
-After `setup`, the Pi stores a `device.secret` credential for backend heartbeat/camera sync. Backend→Pi stream requests still use signed `X-EZCams-*` headers verified with the backend public key in `config.json`.
+After `setup`, the Pi stores a `device.secret` credential for backend camera sync and unregister. Backend→Pi stream requests still use signed `X-EZCams-*` headers verified with the backend public key in `config.json`.
 
 To remove this Pi from the backend while it is still online:
 

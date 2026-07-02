@@ -255,7 +255,7 @@ requests.
 
 ## 10. Verify Backend Camera Access
 
-Force one heartbeat and camera sync:
+Force one camera sync:
 
 ```bash
 cd /opt/ezcams-pi-agent

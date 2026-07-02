@@ -60,7 +60,7 @@ class CliLifecycleTests(unittest.TestCase):
 
         with TemporaryDirectory() as tmp:
             _write_valid_config(Path(tmp))
-            with patch("ezcams_pi_agent.cli.heartbeat_once", fail):
+            with patch("ezcams_pi_agent.cli.sync_cameras_once", fail):
                 with contextlib.redirect_stderr(io.StringIO()):
                     code = _ensure(argparse.Namespace(config_dir=tmp))
 

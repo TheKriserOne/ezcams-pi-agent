@@ -86,36 +86,16 @@ def _validate_local_config(config_dir: Path):
 def _ensure(args: argparse.Namespace) -> int:
     config_dir = _set_config_dir_arg(args)
     try:
-        config = _validate_local_config(config_dir)
+        _validate_local_config(config_dir)
     except Exception as exc:
         print(f"Invalid EZ Cams Pi config: {exc}", file=sys.stderr)
         return 2
 
-    async def run() -> int:
-        try:
-            await sync_cameras_once(config)
-            print("EZ Cams Pi config valid; backend accepted device credentials.")
-            return 0
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code in {401, 404}:
-                print(
-                    f"Backend rejected device credentials: HTTP {exc.response.status_code}",
-                    file=sys.stderr,
-                )
-                return 3
-            print(
-                f"Backend reachable but returned HTTP {exc.response.status_code}; camera service can still start.",
-                file=sys.stderr,
-            )
-            return 0
-        except Exception as exc:
-            print(
-                f"Backend unreachable during ensure: {exc}. Camera service can still start.",
-                file=sys.stderr,
-            )
-            return 0
-
-    return asyncio.run(run())
+    print(
+        "EZ Cams Pi local config valid. "
+        "Camera sync happens when the backend probes this device."
+    )
+    return 0
 
 
 def _remove_local_registration(config_dir: Path, config=None) -> None:

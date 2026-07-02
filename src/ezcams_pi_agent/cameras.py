@@ -195,6 +195,39 @@ def sync_payload(path: str | Path) -> dict:
     }
 
 
+def heartbeat_sync_items(
+    path: str | Path,
+    health: dict | None = None,
+) -> list[dict]:
+    """Camera catalog for backend heartbeat: cameras.json merged with runtime health."""
+    health_map: dict = {}
+    if isinstance(health, dict):
+        raw = health.get("cameras")
+        if isinstance(raw, dict):
+            health_map = raw
+
+    items: list[dict] = []
+    for camera in load_cameras(path):
+        runtime = health_map.get(camera.key)
+        if isinstance(runtime, dict) and "healthy" in runtime:
+            is_available = bool(runtime.get("healthy"))
+        else:
+            is_available = camera.is_available
+        items.append(
+            {
+                "key": camera.key,
+                "name": camera.name,
+                "lat": camera.lat,
+                "lng": camera.lng,
+                "stream_type": camera.effective_stream_type,
+                "description": camera.description,
+                "is_active": camera.is_active,
+                "is_available": is_available,
+            }
+        )
+    return items
+
+
 def write_empty_camera_file(path: str | Path) -> None:
     p = Path(path)
     if p.exists():

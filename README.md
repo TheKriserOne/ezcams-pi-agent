@@ -23,8 +23,11 @@ For a clone at `/opt/ezcams-pi-agent`, that is `/opt/ezcams-pi-agent/.ezcams-pi/
 For this dev tree, it is `./.ezcams-pi/` at the repo root.
 
 `device.secret` is issued once at `setup` and sent as `Authorization: Bearer …` for
-camera sync and unregister. Stream/snapshot requests from the backend still require
-signed `X-EZCams-*` headers verified with `backend_public_key_pem`.
+`unregister` and optional manual `sync-once`. The Pi does **not** periodically push
+to the backend. Camera discovery happens when the backend probes this device via
+signed `GET /backend/heartbeat` and reads the camera catalog from the response.
+Stream/snapshot requests from the backend still require signed `X-EZCams-*` headers
+verified with `backend_public_key_pem`.
 
 Path fields in `config.json` are stored **relative to `.ezcams-pi/`** so the
 install folder is self-contained and portable.
@@ -221,10 +224,8 @@ return the most recent cached frame instantly.
    ```
 
    The service runs `ezcams-pi-agent ensure` before startup and restarts
-   automatically. If the backend is temporarily unreachable, `ensure` prints a
-   warning but still lets the camera service start. If backend credentials are
-   rejected, `ensure` exits nonzero so systemd keeps retrying instead of hiding
-   a broken registration.
+   automatically. `ensure` validates local config only; it does not call the
+   backend. Camera rows update when the backend probes this Pi.
 
 7. Forward router TCP port `8443` to the Pi LAN IP port `8443`.
 
@@ -238,7 +239,15 @@ return the most recent cached frame instantly.
 
 The unsigned stream request should return `401`. A stream should work through `cams-server` only after the backend signs the Pi request.
 
-After `setup`, the Pi stores a `device.secret` credential for backend camera sync and unregister. Backend→Pi stream requests still use signed `X-EZCams-*` headers verified with the backend public key in `config.json`.
+After `setup`, the Pi stores a `device.secret` credential for `unregister` and
+optional manual `sync-once`. Backend→Pi stream requests still use signed
+`X-EZCams-*` headers verified with the backend public key in `config.json`.
+
+Emergency manual camera push (normally not needed):
+
+```bash
+./.venv/bin/ezcams-pi-agent sync-once
+```
 
 To remove this Pi from the backend while it is still online:
 

@@ -191,9 +191,9 @@ sudo systemctl enable --now ezcams-pi-agent
 
 The service uses `WorkingDirectory=/opt/ezcams-pi-agent` so config stays in
 `/opt/ezcams-pi-agent/.ezcams-pi/`. It runs `ensure` before `run` and uses
-`Restart=always`, so camera access resumes after power loss. Backend network
-outages log warnings; rejected device credentials fail preflight and systemd
-retries.
+`Restart=always`, so camera access resumes after power loss. `ensure` checks
+local config only. The backend probes this Pi on its own schedule and syncs
+cameras from the signed `/backend/heartbeat` response.
 
 Check status:
 
@@ -241,8 +241,9 @@ Unsigned stream access should fail:
 curl -k https://YOUR_PUBLIC_HOST_OR_IP:8443/stream/front-door
 ```
 
-Backend probes use signed `GET /backend/heartbeat`; direct unsigned calls should
-return `401`.
+Backend probes use signed `GET /backend/heartbeat`. The response includes the
+camera catalog from `cameras.json` plus runtime health. Direct unsigned calls
+should return `401`.
 
 Expected result:
 
@@ -255,7 +256,7 @@ requests.
 
 ## 10. Verify Backend Camera Access
 
-Force one camera sync:
+Force one manual camera push (emergency fallback only):
 
 ```bash
 cd /opt/ezcams-pi-agent

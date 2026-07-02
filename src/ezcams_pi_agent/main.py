@@ -14,13 +14,12 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, Response, StreamingResponse
 
-from ezcams_pi_agent.backend_client import background_sync_loop
 from ezcams_pi_agent.camera_manager import (
     CameraManager,
     CameraUnavailableError,
     open_camera_stream_async,
 )
-from ezcams_pi_agent.cameras import LocalCamera, find_camera
+from ezcams_pi_agent.cameras import LocalCamera, find_camera, heartbeat_sync_items
 from ezcams_pi_agent.config import AgentConfig, load_config, loopback_unsigned_enabled
 from ezcams_pi_agent.crypto import payload_from_header, verify_payload_signature
 from ezcams_pi_agent.streams.common import MJPEG_MEDIA_TYPE
@@ -275,12 +274,14 @@ async def _lifespan(app: FastAPI):
         except Exception as exc:
             log.warning("camera manager startup failed: %s", exc)
 
-        if os.getenv("EZCAMS_PI_DISABLE_SYNC", "").strip().lower() not in {
+        if os.getenv("EZCAMS_PI_ENABLE_BACKGROUND_SYNC", "").strip().lower() in {
             "1",
             "true",
             "yes",
             "on",
         }:
+            from ezcams_pi_agent.backend_client import background_sync_loop
+
             sync_task = asyncio.create_task(background_sync_loop(config))
 
     try:
@@ -311,19 +312,27 @@ async def backend_heartbeat(request: Request):
     config = await _verify_backend_device_request(
         request, action="device:heartbeat"
     )
-    payload: dict = {
+    manager = _manager
+    health: dict | None = None
+    if manager is not None:
+        try:
+            health = manager.health()
+        except Exception as exc:
+            log.warning("heartbeat manager health failed: %s", exc)
+
+    cameras = heartbeat_sync_items(config.cameras_path, health)
+    status = "ok"
+    if health is not None:
+        status = str(health.get("status") or "ok")
+    elif not cameras:
+        status = "degraded"
+
+    return {
         "device_id": config.device_id,
-        "status": "ok",
+        "status": status,
         "agent_version": "0.1.0",
+        "cameras": cameras,
     }
-    try:
-        manager = _get_manager()
-        payload.update(manager.health())
-    except Exception as exc:
-        payload["status"] = "degraded"
-        payload["error"] = str(exc)
-        payload["cameras"] = {}
-    return payload
 
 
 @app.get("/health")

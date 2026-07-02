@@ -206,6 +206,9 @@ class SignedRequestTests(unittest.TestCase):
         data = response.json()
         self.assertEqual(data["device_id"], self.device_id)
         self.assertIn(data["status"], {"ok", "degraded"})
+        self.assertIsInstance(data["cameras"], list)
+        self.assertGreaterEqual(len(data["cameras"]), 1)
+        self.assertEqual(data["cameras"][0]["key"], "front-door")
 
     def test_valid_signed_recordings_list_returns_camera_clips(self) -> None:
         response = self.client.get(

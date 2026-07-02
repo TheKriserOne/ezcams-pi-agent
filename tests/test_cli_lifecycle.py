@@ -7,9 +7,6 @@ import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
-
-import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -54,15 +51,11 @@ class CliLifecycleTests(unittest.TestCase):
 
         self.assertEqual(code, 2)
 
-    def test_ensure_returns_zero_when_backend_unreachable_but_config_valid(self) -> None:
-        async def fail(_config):
-            raise httpx.ConnectError("offline")
-
+    def test_ensure_returns_zero_for_valid_local_config(self) -> None:
         with TemporaryDirectory() as tmp:
             _write_valid_config(Path(tmp))
-            with patch("ezcams_pi_agent.cli.sync_cameras_once", fail):
-                with contextlib.redirect_stderr(io.StringIO()):
-                    code = _ensure(argparse.Namespace(config_dir=tmp))
+            with contextlib.redirect_stdout(io.StringIO()):
+                code = _ensure(argparse.Namespace(config_dir=tmp))
 
         self.assertEqual(code, 0)
 
